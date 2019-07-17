@@ -1,9 +1,6 @@
 require "csv"
 require "google/apis/civicinfo_v2"
 
-civicinfo = Google::Apis::CivicinfoV2::CivicInfoService.new
-civicinfo.key = "AIzaSyClRzDqDh5MsXwnCWi0kOiiBivP6JsSyBw"
-
 puts "EventManager Initilaized!"
 
 class Attendee
@@ -20,13 +17,19 @@ def clean_zipcode(zipcode)
 end
 
 def legislators_by_zipcode(zipcode)
-  legislators = civicinfo.representative_info_by_address(address: zipcode, levels: "country", roles: ["legislatorUpperBody", "legislatorLowerBody"])
-  legislators = legislators.officials
-  legislator_names = []
-  legislators.each do |legislator|
-    legislator_names << legislator.name
+  civicinfo = Google::Apis::CivicinfoV2::CivicInfoService.new
+  civicinfo.key = "AIzaSyClRzDqDh5MsXwnCWi0kOiiBivP6JsSyBw"
+  begin
+    legislators = civicinfo.representative_info_by_address(address: zipcode, levels: "country", roles: ["legislatorUpperBody", "legislatorLowerBody"])
+    legislators = legislators.officials
+    legislator_names = []
+    legislators.each do |legislator|
+      legislator_names << legislator.name
+    end
+    legislator_names.join(",")
+  rescue
+    "You can find your representative by visiting www.commoncause.org/take-action/find-elected-officials"
   end
-  legislator_names
 end
 
 
@@ -34,10 +37,7 @@ data = CSV.open("event_attendees.csv", headers: true, header_converters: :symbol
 data.each do |row|
   name = row[:first_name]
   zipcode = clean_zipcode(row[:zipcode])
-  begin
-    legislators_by_zipcode(zipcode)
-  rescue
-    "You can find your representative by visiting www.commoncause.org/take-action/find-elected-officials"
-  end
-  puts "#{name} #{zipcode} #{legislator_names.join(",") if legislator_names}"
+  legislator_names = legislators_by_zipcode(zipcode)
+
+  puts "#{name} #{zipcode} #{legislator_names}"
 end
